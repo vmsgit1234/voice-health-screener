@@ -433,6 +433,27 @@ export default function App() {
   const recognitionRef = useRef(null);
   const isCallActiveRef = useRef(false);
 
+  // Dynamic WebSocket URL handling both production (Vercel/Render) and local dev
+  const getWsUrl = () => {
+    let customWsUrl = null;
+    try {
+      if (typeof window !== 'undefined' && window.VITE_WS_URL) {
+        customWsUrl = window.VITE_WS_URL;
+      } else if (typeof process !== 'undefined' && process.env && process.env.VITE_WS_URL) {
+        customWsUrl = process.env.VITE_WS_URL;
+      }
+    } catch (e) {
+      // Ignored
+    }
+
+    if (customWsUrl) {
+      return customWsUrl;
+    }
+
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${protocol}//localhost:5000`;
+  };
+
   // Text-to-Speech Output Function
   const speakText = useCallback((text) => {
     if (isVoiceMuted || !('speechSynthesis' in window)) return;
@@ -559,7 +580,8 @@ export default function App() {
     isCallActiveRef.current = true;
 
     try {
-      const socket = new WebSocket('ws://localhost:5000');
+      const wsUrl = getWsUrl();
+      const socket = new WebSocket(wsUrl);
       socketRef.current = socket;
 
       socket.onopen = () => {
